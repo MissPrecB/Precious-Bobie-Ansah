@@ -297,6 +297,41 @@ def feature_distribution_chart(values):
     return fig
 
 
+def histogram_chart(values):
+    cancer = load_dataset_info()
+    selected_features = ['mean radius', 'mean area', 'mean concavity']
+    fig = go.Figure()
+
+    for feature in selected_features:
+        idx = FEATURE_NAMES.index(feature)
+        fig.add_trace(
+            go.Histogram(
+                x=cancer.data[:, idx],
+                name=feature,
+                opacity=0.6,
+                nbinsx=30,
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=[values[idx], values[idx]],
+                y=[0, 30],
+                mode='lines',
+                name=f'{feature} input',
+                line=dict(width=3),
+            )
+        )
+
+    fig.update_layout(
+        barmode='overlay',
+        title='Histogram of key features with input values',
+        xaxis_title='Feature value',
+        yaxis_title='Count',
+        margin=dict(l=20, r=20, t=40, b=40),
+    )
+    return fig
+
+
 def load_dataset_info():
     cancer = load_breast_cancer()
     return cancer
@@ -346,13 +381,15 @@ def main():
                     trend = trend_chart(user_input.flatten())
                     gauge = probability_gauge(score, prediction)
                     distribution = feature_distribution_chart(user_input.flatten())
+                    histogram = histogram_chart(user_input.flatten())
 
-                    tabs = right_col.tabs(['Radar', 'Comparison', 'Trend', 'Confidence', 'Distribution'])
+                    tabs = right_col.tabs(['Radar', 'Comparison', 'Trend', 'Confidence', 'Distribution', 'Histogram'])
                     tabs[0].plotly_chart(chart, use_container_width=True)
                     tabs[1].plotly_chart(comparison, use_container_width=True)
                     tabs[2].plotly_chart(trend, use_container_width=True)
                     tabs[3].plotly_chart(gauge, use_container_width=True)
                     tabs[4].plotly_chart(distribution, use_container_width=True)
+                    tabs[5].plotly_chart(histogram, use_container_width=True)
 
                     insights = build_insights(user_input)
                     with right_col.expander('Model Insight'):
