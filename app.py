@@ -204,6 +204,40 @@ def feature_comparison_chart(values):
     return fig
 
 
+def trend_chart(values):
+    cancer = load_dataset_info()
+    mean_vals = np.mean(cancer.data, axis=0)
+    selected_values = [values[FEATURE_NAMES.index(f)] for f in RADAR_FEATURES]
+    average_values = [mean_vals[FEATURE_NAMES.index(f)] for f in RADAR_FEATURES]
+
+    fig = go.Figure(
+        data=[
+            go.Scatter(
+                x=RADAR_FEATURES,
+                y=selected_values,
+                mode='lines+markers',
+                name='Selected trend',
+                line=dict(color='#0b4d82', width=3),
+            ),
+            go.Scatter(
+                x=RADAR_FEATURES,
+                y=average_values,
+                mode='lines+markers',
+                name='Dataset average trend',
+                line=dict(color='#7db3e6', dash='dash', width=2),
+            ),
+        ]
+    )
+    fig.update_layout(
+        title='Feature trend across selected tumor values',
+        xaxis_title='Features',
+        yaxis_title='Value',
+        margin=dict(l=20, r=20, t=40, b=80),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+    )
+    return fig
+
+
 def probability_gauge(score, prediction):
     label = 'Benign' if prediction == 1 else 'Malignant'
     color = '#1f9d55' if prediction == 1 else '#c0392b'
@@ -309,14 +343,16 @@ def main():
 
                     chart = radar_chart(user_input.flatten())
                     comparison = feature_comparison_chart(user_input.flatten())
+                    trend = trend_chart(user_input.flatten())
                     gauge = probability_gauge(score, prediction)
                     distribution = feature_distribution_chart(user_input.flatten())
 
-                    tabs = right_col.tabs(['Radar', 'Comparison', 'Confidence', 'Distribution'])
+                    tabs = right_col.tabs(['Radar', 'Comparison', 'Trend', 'Confidence', 'Distribution'])
                     tabs[0].plotly_chart(chart, use_container_width=True)
                     tabs[1].plotly_chart(comparison, use_container_width=True)
-                    tabs[2].plotly_chart(gauge, use_container_width=True)
-                    tabs[3].plotly_chart(distribution, use_container_width=True)
+                    tabs[2].plotly_chart(trend, use_container_width=True)
+                    tabs[3].plotly_chart(gauge, use_container_width=True)
+                    tabs[4].plotly_chart(distribution, use_container_width=True)
 
                     insights = build_insights(user_input)
                     with right_col.expander('Model Insight'):
