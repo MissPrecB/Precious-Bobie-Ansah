@@ -171,6 +171,98 @@ def build_insights(user_input):
     return insights
 
 
+def feature_comparison_chart(values):
+    cancer = load_dataset_info()
+    mean_vals = np.mean(cancer.data, axis=0)
+    selected_values = [values[FEATURE_NAMES.index(f)] for f in RADAR_FEATURES]
+    average_values = [mean_vals[FEATURE_NAMES.index(f)] for f in RADAR_FEATURES]
+
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                name='Selected',
+                x=RADAR_FEATURES,
+                y=selected_values,
+                marker_color='#0b4d82',
+            ),
+            go.Bar(
+                name='Dataset average',
+                x=RADAR_FEATURES,
+                y=average_values,
+                marker_color='#7DB3E6',
+            ),
+        ]
+    )
+    fig.update_layout(
+        barmode='group',
+        title='Selected values vs dataset average',
+        xaxis_title='Feature',
+        yaxis_title='Value',
+        margin=dict(l=20, r=20, t=40, b=80),
+        legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+    )
+    return fig
+
+
+def probability_gauge(score, prediction):
+    label = 'Benign' if prediction == 1 else 'Malignant'
+    color = '#1f9d55' if prediction == 1 else '#c0392b'
+    fig = go.Figure(
+        go.Indicator(
+            mode='gauge+number+delta',
+            value=score * 100,
+            delta={'reference': 50, 'increasing': {'color': '#0b4d82'}},
+            gauge={
+                'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': '#091C4B'},
+                'bar': {'color': color},
+                'bgcolor': '#f4f7fc',
+                'steps': [
+                    {'range': [0, 50], 'color': '#d7e9fb'},
+                    {'range': [50, 100], 'color': '#a6c8ff'},
+                ],
+            },
+            title={'text': f'Prediction confidence ({label})', 'font': {'size': 16}},
+        )
+    )
+    fig.update_layout(margin=dict(l=20, r=20, t=40, b=20), height=320)
+    return fig
+
+
+def feature_distribution_chart(values):
+    cancer = load_dataset_info()
+    features = ['mean radius', 'mean texture', 'mean area']
+    fig = go.Figure()
+
+    for feature in features:
+        idx = FEATURE_NAMES.index(feature)
+        fig.add_trace(
+            go.Histogram(
+                x=cancer.data[:, idx],
+                name=feature,
+                opacity=0.6,
+                nbinsx=30,
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=[values[idx], values[idx]],
+                y=[0, 25],
+                mode='lines',
+                name=f'{feature} input',
+                line=dict(width=3),
+            )
+        )
+
+    fig.update_layout(
+        barmode='overlay',
+        title='Selected values against dataset distributions',
+        xaxis_title='Value',
+        yaxis_title='Count',
+        margin=dict(l=20, r=20, t=40, b=40),
+    )
+    return fig
+
+
 def load_dataset_info():
     cancer = load_breast_cancer()
     return cancer
@@ -192,7 +284,7 @@ def display_prediction(model, scaler, user_input):
     st.markdown('**Prediction value:** ' + str(int(prediction)))
     st.markdown('**Legend:** 0 = Malignant, 1 = Benign')
 
-    return prediction
+    return prediction, score, probability
 
 
 def main():
@@ -213,9 +305,18 @@ def main():
             if st.button('Predict'):
                 try:
                     model, scaler = load_model()
-                    prediction = display_prediction(model, scaler, user_input)
+                    prediction, score, probability = display_prediction(model, scaler, user_input)
+
                     chart = radar_chart(user_input.flatten())
-                    right_col.plotly_chart(chart, use_container_width=True)
+                    comparison = feature_comparison_chart(user_input.flatten())
+                    gauge = probability_gauge(score, prediction)
+                    distribution = feature_distribution_chart(user_input.flatten())
+
+                    tabs = right_col.tabs(['Radar', 'Comparison', 'Confidence', 'Distribution'])
+                    tabs[0].plotly_chart(chart, use_container_width=True)
+                    tabs[1].plotly_chart(comparison, use_container_width=True)
+                    tabs[2].plotly_chart(gauge, use_container_width=True)
+                    tabs[3].plotly_chart(distribution, use_container_width=True)
 
                     insights = build_insights(user_input)
                     with right_col.expander('Model Insight'):
